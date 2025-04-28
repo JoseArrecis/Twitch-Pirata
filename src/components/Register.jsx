@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Input } from './Input'
 import { useRegister } from '../shared/hooks/useRegister'
 import { emailValidationMessage, passConfirmValidationMessage, passwordValidationMessage, usernameValidationMessage, validateEmail, validatePassConfirm, validatePassword, validateUsername } from '../shared/validators/validator'
+import { useNavigate } from 'react-router-dom'
 
 
 //Formularios no controlado
@@ -16,6 +17,7 @@ import { emailValidationMessage, passConfirmValidationMessage, passwordValidatio
     */
 
 export const Register = () => {
+    const navigate = useNavigate()
 
     const form = {
         email: {
@@ -50,13 +52,18 @@ export const Register = () => {
                                     !formData.passwordConfirm.isValid
 
     
-    const handleRegister = (e)=>{
+    const handleRegister = async (e) => {
         e.preventDefault()
-        register(
-            formData.email.value,
-            formData.username.value,
-            formData.password.value
-        )
+        try {
+            await register(
+                formData.email.value,
+                formData.username.value,
+                formData.password.value
+            )
+        navigate('/auth')
+        } catch (error) {
+            console.error('Error al registrar:', error)
+        }
     }
 
     //función específica para validar campos
@@ -92,18 +99,37 @@ export const Register = () => {
 
     //Función manejadora de cambios del estado
                         //nuevo valor //Input que cambió
-    const handleValueChange = (value, field)=>{
-        setFormData((prevData)=> (
-            {
-                ...prevData,
-                [field]: {
-                    ...prevData[field],
-                    value
-                }
+    const handleValueChange = (value, field) => {
+        let isValid = false
+        switch (field) {
+            case 'email':
+                isValid = validateEmail(value)
+                break;
+            case 'username':
+                isValid = validateUsername(value)
+                break;
+            case 'password':
+                isValid = validatePassword(value)
+                break;
+            case 'passwordConfirm':
+                isValid = validatePassConfirm(formData.password.value, value)
+                break;
+            default:
+            break;
+        }
+                        
+        setFormData((prevData) => ({
+            ...prevData,
+            [field]: {
+                ...prevData[field],
+                value,
+                isValid,
+                showError: !isValid
             }
-        ))
-        console.log(formData)
+        }));
     }
+                        
+
   return (
     <div className='register-container'>
         <form
@@ -155,11 +181,11 @@ export const Register = () => {
                 validationMessage={passConfirmValidationMessage}
             />      
             <button 
-                type='submit'
-                disabled={isSubmitButtonDisable}
-            >
-                Enviar
-            </button>
+                    type='submit'
+                    disabled={isSubmitButtonDisable || isLoading} // También deshabilitar si está cargando
+                >
+                    {isLoading ? 'Registrando...' : 'Enviar'}
+                </button>
         </form>
     </div>
   )
